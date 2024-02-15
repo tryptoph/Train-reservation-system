@@ -1,4 +1,4 @@
-package admin ; 
+package admin;
 
 import javax.swing.*;
 import javax.swing.table.*;
@@ -10,16 +10,24 @@ import java.util.Vector;
 public class TrajetGUI extends JFrame {
     private JTable table;
     private DefaultTableModel tableModel;
+    private JComboBox<String> fromComboBox;
+    private JComboBox<String> toComboBox;
+    private JComboBox<Integer> trainNumberComboBox;
+    private JComboBox<String> classComboBox;
 
     public TrajetGUI() {
         setTitle("Trajet Management");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setSize(500, 500);
+        setSize(800, 600);
+        setLocationRelativeTo(null); // Center the window on the screen
+
 
         tableModel = new DefaultTableModel();
         tableModel.addColumn("ID");
         tableModel.addColumn("From");
         tableModel.addColumn("To");
+        tableModel.addColumn("Train Number");
+        tableModel.addColumn("Class");
         tableModel.addColumn("Departure Time");
         tableModel.addColumn("Arrival Time");
         tableModel.addColumn("Time Difference");
@@ -75,19 +83,22 @@ public class TrajetGUI extends JFrame {
         // Set the background color of the content pane
         getContentPane().setBackground(new Color(255, 165, 0)); // Orange
 
+        // Load data into the UI
         loadTrajetData();
     }
 
     private void loadTrajetData() {
         try (Connection connection = DbConnector.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement("SELECT * FROM trajet");
-             ResultSet resultSet = preparedStatement.executeQuery()) {
+             Statement statement = connection.createStatement();
+             ResultSet resultSet = statement.executeQuery("SELECT trajet.ID, g1.nom_gare AS from_location, g2.nom_gare AS to_location, num_train, class_train, departure_time, arrival_time, time_difference, price FROM trajet INNER JOIN gare AS g1 ON trajet.from_location = g1.id_gare INNER JOIN gare AS g2 ON trajet.to_location = g2.id_gare")) {
 
             while (resultSet.next()) {
                 Vector<Object> row = new Vector<>();
                 row.add(resultSet.getInt("ID"));
                 row.add(resultSet.getString("from_location"));
                 row.add(resultSet.getString("to_location"));
+                row.add(resultSet.getInt("num_train"));
+                row.add(resultSet.getString("class_train"));
                 row.add(resultSet.getTime("departure_time"));
                 row.add(resultSet.getTime("arrival_time"));
                 row.add(resultSet.getTime("time_difference"));
@@ -101,7 +112,6 @@ public class TrajetGUI extends JFrame {
     }
 
     private void addRow() {
-        // Create a dialog for adding a new row
         JFrame addFrame = new JFrame("Add Trajet");
         addFrame.setSize(500, 500);
         addFrame.setLayout(new GridBagLayout());
@@ -111,14 +121,17 @@ public class TrajetGUI extends JFrame {
         gbc.anchor = GridBagConstraints.WEST;
         gbc.insets = new Insets(5, 5, 5, 5);
 
-        // Add fields for each column
         JTextField idField = new JTextField(10);
-        JTextField fromField = new JTextField(10);
-        JTextField toField = new JTextField(10);
+        fromComboBox = new JComboBox<>();
+        toComboBox = new JComboBox<>();
+        trainNumberComboBox = new JComboBox<>();
+        classComboBox = new JComboBox<>();
         JTextField departureField = new JTextField(10);
         JTextField arrivalField = new JTextField(10);
         JTextField differenceField = new JTextField(10);
         JTextField priceField = new JTextField(10);
+
+        populateComboBoxes();
 
         addFrame.add(new JLabel("ID:"), gbc);
         gbc.gridx++;
@@ -127,12 +140,22 @@ public class TrajetGUI extends JFrame {
         gbc.gridy++;
         addFrame.add(new JLabel("From:"), gbc);
         gbc.gridx++;
-        addFrame.add(fromField, gbc);
+        addFrame.add(fromComboBox, gbc);
         gbc.gridx = 0;
         gbc.gridy++;
         addFrame.add(new JLabel("To:"), gbc);
         gbc.gridx++;
-        addFrame.add(toField, gbc);
+        addFrame.add(toComboBox, gbc);
+        gbc.gridx = 0;
+        gbc.gridy++;
+        addFrame.add(new JLabel("Train Number:"), gbc);
+        gbc.gridx++;
+        addFrame.add(trainNumberComboBox, gbc);
+        gbc.gridx = 0;
+        gbc.gridy++;
+        addFrame.add(new JLabel("Class:"), gbc);
+        gbc.gridx++;
+        addFrame.add(classComboBox, gbc);
         gbc.gridx = 0;
         gbc.gridy++;
         addFrame.add(new JLabel("Departure Time:"), gbc);
@@ -163,11 +186,12 @@ public class TrajetGUI extends JFrame {
         saveButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                // Add the new row to the table
                 Vector<Object> newRow = new Vector<>();
                 newRow.add(idField.getText());
-                newRow.add(fromField.getText());
-                newRow.add(toField.getText());
+                newRow.add(fromComboBox.getSelectedItem());
+                newRow.add(toComboBox.getSelectedItem());
+                newRow.add(trainNumberComboBox.getSelectedItem());
+                newRow.add(classComboBox.getSelectedItem());
                 newRow.add(departureField.getText());
                 newRow.add(arrivalField.getText());
                 newRow.add(differenceField.getText());
@@ -175,17 +199,18 @@ public class TrajetGUI extends JFrame {
 
                 tableModel.addRow(newRow);
 
-                // Add the new row to the database
                 try (Connection connection = DbConnector.getConnection();
-                     PreparedStatement preparedStatement = connection.prepareStatement("INSERT INTO trajet (ID, from_location, to_location, departure_time, arrival_time, time_difference, price) VALUES (?, ?, ?, ?, ?, ?, ?)")) {
+                     PreparedStatement preparedStatement = connection.prepareStatement("INSERT INTO trajet (ID, from_location, to_location, num_train, class_train, departure_time, arrival_time, time_difference, price) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)")) {
 
                     preparedStatement.setString(1, idField.getText());
-                    preparedStatement.setString(2, fromField.getText());
-                    preparedStatement.setString(3, toField.getText());
-                    preparedStatement.setString(4, departureField.getText());
-                    preparedStatement.setString(5, arrivalField.getText());
-                    preparedStatement.setString(6, differenceField.getText());
-                    preparedStatement.setString(7, priceField.getText());
+                    preparedStatement.setInt(2, fromComboBox.getSelectedIndex() + 1);
+                    preparedStatement.setInt(3, toComboBox.getSelectedIndex() + 1);
+                    preparedStatement.setInt(4, (int) trainNumberComboBox.getSelectedItem());
+                    preparedStatement.setString(5, classComboBox.getSelectedItem().toString());
+                    preparedStatement.setString(6, departureField.getText());
+                    preparedStatement.setString(7, arrivalField.getText());
+                    preparedStatement.setString(8, differenceField.getText());
+                    preparedStatement.setString(9, priceField.getText());
 
                     int rowsAffected = preparedStatement.executeUpdate();
                     if (rowsAffected > 0) {
@@ -197,7 +222,6 @@ public class TrajetGUI extends JFrame {
                     ex.printStackTrace();
                 }
 
-                // Close the dialog
                 addFrame.dispose();
             }
         });
@@ -206,7 +230,6 @@ public class TrajetGUI extends JFrame {
     }
 
     private void modifyRow() {
-        // Create a dialog for modifying a row
         JFrame modifyFrame = new JFrame("Modify Trajet");
         modifyFrame.setSize(500, 500);
         modifyFrame.setLayout(new GridBagLayout());
@@ -216,14 +239,17 @@ public class TrajetGUI extends JFrame {
         gbc.anchor = GridBagConstraints.WEST;
         gbc.insets = new Insets(5, 5, 5, 5);
 
-        // Add fields for each column
         JTextField idField = new JTextField(10);
-        JTextField fromField = new JTextField(10);
-        JTextField toField = new JTextField(10);
+        fromComboBox = new JComboBox<>();
+        toComboBox = new JComboBox<>();
+        trainNumberComboBox = new JComboBox<>();
+        classComboBox = new JComboBox<>();
         JTextField departureField = new JTextField(10);
         JTextField arrivalField = new JTextField(10);
         JTextField differenceField = new JTextField(10);
         JTextField priceField = new JTextField(10);
+
+        populateComboBoxes();
 
         modifyFrame.add(new JLabel("ID:"), gbc);
         gbc.gridx++;
@@ -232,12 +258,22 @@ public class TrajetGUI extends JFrame {
         gbc.gridy++;
         modifyFrame.add(new JLabel("From:"), gbc);
         gbc.gridx++;
-        modifyFrame.add(fromField, gbc);
+        modifyFrame.add(fromComboBox, gbc);
         gbc.gridx = 0;
         gbc.gridy++;
         modifyFrame.add(new JLabel("To:"), gbc);
         gbc.gridx++;
-        modifyFrame.add(toField, gbc);
+        modifyFrame.add(toComboBox, gbc);
+        gbc.gridx = 0;
+        gbc.gridy++;
+        modifyFrame.add(new JLabel("Train Number:"), gbc);
+        gbc.gridx++;
+        modifyFrame.add(trainNumberComboBox, gbc);
+        gbc.gridx = 0;
+        gbc.gridy++;
+        modifyFrame.add(new JLabel("Class:"), gbc);
+        gbc.gridx++;
+        modifyFrame.add(classComboBox, gbc);
         gbc.gridx = 0;
         gbc.gridy++;
         modifyFrame.add(new JLabel("Departure Time:"), gbc);
@@ -268,10 +304,8 @@ public class TrajetGUI extends JFrame {
         modifyConfirmButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                // Get the ID to modify
                 String idToModify = idField.getText();
                 if (!idToModify.isEmpty()) {
-                    // Modify the row in the table
                     int rowIndex = -1;
                     for (int i = 0; i < tableModel.getRowCount(); i++) {
                         if (tableModel.getValueAt(i, 0).toString().equals(idToModify)) {
@@ -280,37 +314,42 @@ public class TrajetGUI extends JFrame {
                         }
                     }
                     if (rowIndex != -1) {
-                        // Update the values in the table
-                        if (!fromField.getText().isEmpty()) {
-                            tableModel.setValueAt(fromField.getText(), rowIndex, 1);
+                        if (!fromComboBox.getSelectedItem().toString().isEmpty()) {
+                            tableModel.setValueAt(fromComboBox.getSelectedItem(), rowIndex, 1);
                         }
-                        if (!toField.getText().isEmpty()) {
-                            tableModel.setValueAt(toField.getText(), rowIndex, 2);
+                        if (!toComboBox.getSelectedItem().toString().isEmpty()) {
+                            tableModel.setValueAt(toComboBox.getSelectedItem(), rowIndex, 2);
+                        }
+                        if (!trainNumberComboBox.getSelectedItem().toString().isEmpty()) {
+                            tableModel.setValueAt(trainNumberComboBox.getSelectedItem(), rowIndex, 3);
+                        }
+                        if (!classComboBox.getSelectedItem().toString().isEmpty()) {
+                            tableModel.setValueAt(classComboBox.getSelectedItem(), rowIndex, 4);
                         }
                         if (!departureField.getText().isEmpty()) {
-                            tableModel.setValueAt(departureField.getText(), rowIndex, 3);
+                            tableModel.setValueAt(departureField.getText(), rowIndex, 5);
                         }
                         if (!arrivalField.getText().isEmpty()) {
-                            tableModel.setValueAt(arrivalField.getText(), rowIndex, 4);
+                            tableModel.setValueAt(arrivalField.getText(), rowIndex, 6);
                         }
                         if (!differenceField.getText().isEmpty()) {
-                            tableModel.setValueAt(differenceField.getText(), rowIndex, 5);
+                            tableModel.setValueAt(differenceField.getText(), rowIndex, 7);
                         }
                         if (!priceField.getText().isEmpty()) {
-                            tableModel.setValueAt(priceField.getText(), rowIndex, 6);
+                            tableModel.setValueAt(priceField.getText(), rowIndex, 8);
                         }
 
-                        // Modify the row in the database
                         try (Connection connection = DbConnector.getConnection();
-                             PreparedStatement preparedStatement = connection.prepareStatement("UPDATE trajet SET from_location=?, to_location=?, departure_time=?, arrival_time=?, time_difference=?, price=? WHERE ID=?")) {
-                            preparedStatement.setString(7, idToModify);
-                            // Update the values in the database
-                            preparedStatement.setString(1, fromField.getText().isEmpty() ? tableModel.getValueAt(rowIndex, 1).toString() : fromField.getText());
-                            preparedStatement.setString(2, toField.getText().isEmpty() ? tableModel.getValueAt(rowIndex, 2).toString() : toField.getText());
-                            preparedStatement.setString(3, departureField.getText().isEmpty() ? tableModel.getValueAt(rowIndex, 3).toString() : departureField.getText());
-                            preparedStatement.setString(4, arrivalField.getText().isEmpty() ? tableModel.getValueAt(rowIndex, 4).toString() : arrivalField.getText());
-                            preparedStatement.setString(5, differenceField.getText().isEmpty() ? tableModel.getValueAt(rowIndex, 5).toString() : differenceField.getText());
-                            preparedStatement.setString(6, priceField.getText().isEmpty() ? tableModel.getValueAt(rowIndex, 6).toString() : priceField.getText());
+                             PreparedStatement preparedStatement = connection.prepareStatement("UPDATE trajet SET from_location=?, to_location=?, num_train=?, class_train=?, departure_time=?, arrival_time=?, time_difference=?, price=? WHERE ID=?")) {
+                            preparedStatement.setInt(9, Integer.parseInt(idToModify));
+                            preparedStatement.setInt(1, fromComboBox.getSelectedIndex() + 1);
+                            preparedStatement.setInt(2, toComboBox.getSelectedIndex() + 1);
+                            preparedStatement.setInt(3, (int) trainNumberComboBox.getSelectedItem());
+                            preparedStatement.setString(4, classComboBox.getSelectedItem().toString());
+                            preparedStatement.setString(5, departureField.getText().isEmpty() ? tableModel.getValueAt(rowIndex, 5).toString() : departureField.getText());
+                            preparedStatement.setString(6, arrivalField.getText().isEmpty() ? tableModel.getValueAt(rowIndex, 6).toString() : arrivalField.getText());
+                            preparedStatement.setString(7, differenceField.getText().isEmpty() ? tableModel.getValueAt(rowIndex, 7).toString() : differenceField.getText());
+                            preparedStatement.setString(8, priceField.getText().isEmpty() ? tableModel.getValueAt(rowIndex, 8).toString() : priceField.getText());
 
                             int rowsAffected = preparedStatement.executeUpdate();
                             if (rowsAffected > 0) {
@@ -324,7 +363,6 @@ public class TrajetGUI extends JFrame {
                     }
                 }
 
-                // Close the dialog
                 modifyFrame.dispose();
             }
         });
@@ -332,10 +370,7 @@ public class TrajetGUI extends JFrame {
         modifyFrame.setVisible(true);
     }
 
-
-
     private void deleteRow() {
-        // Create a dialog for deleting a row
         JFrame deleteFrame = new JFrame("Delete Trajet");
         deleteFrame.setSize(300, 100);
         deleteFrame.setLayout(new GridBagLayout());
@@ -345,7 +380,6 @@ public class TrajetGUI extends JFrame {
         gbc.anchor = GridBagConstraints.WEST;
         gbc.insets = new Insets(5, 5, 5, 5);
 
-        // Add a field for the ID of the row to delete
         JTextField idToDeleteField = new JTextField(10);
 
         deleteFrame.add(new JLabel("ID to delete:"), gbc);
@@ -359,10 +393,8 @@ public class TrajetGUI extends JFrame {
         deleteConfirmButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                // Get the ID to delete
                 String idToDelete = idToDeleteField.getText();
                 if (!idToDelete.isEmpty()) {
-                    // Delete the row from the table
                     int rowIndex = -1;
                     for (int i = 0; i < tableModel.getRowCount(); i++) {
                         if (tableModel.getValueAt(i, 0).toString().equals(idToDelete)) {
@@ -374,10 +406,9 @@ public class TrajetGUI extends JFrame {
                         tableModel.removeRow(rowIndex);
                     }
 
-                    // Delete the row from the database
                     try (Connection connection = DbConnector.getConnection();
                          PreparedStatement preparedStatement = connection.prepareStatement("DELETE FROM trajet WHERE ID = ?")) {
-                        preparedStatement.setString(1, idToDelete);
+                        preparedStatement.setInt(1, Integer.parseInt(idToDelete));
                         int rowsAffected = preparedStatement.executeUpdate();
                         if (rowsAffected > 0) {
                             System.out.println("Row deleted from database successfully.");
@@ -389,12 +420,53 @@ public class TrajetGUI extends JFrame {
                     }
                 }
 
-                // Close the dialog
                 deleteFrame.dispose();
             }
         });
 
         deleteFrame.setVisible(true);
+    }
+
+    private void populateComboBoxes() {
+        try (Connection connection = DbConnector.getConnection();
+             Statement statement = connection.createStatement();
+             ResultSet resultSet = statement.executeQuery("SELECT nom_gare FROM gare")) {
+
+            while (resultSet.next()) {
+                String gareName = resultSet.getString("nom_gare");
+                fromComboBox.addItem(gareName);
+                toComboBox.addItem(gareName);
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        try (Connection connection = DbConnector.getConnection();
+             Statement statement = connection.createStatement();
+             ResultSet resultSet = statement.executeQuery("SELECT num_train FROM train")) {
+
+            while (resultSet.next()) {
+                int trainNumber = resultSet.getInt("num_train");
+                trainNumberComboBox.addItem(trainNumber);
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        try (Connection connection = DbConnector.getConnection();
+             Statement statement = connection.createStatement();
+             ResultSet resultSet = statement.executeQuery("SELECT DISTINCT class_train FROM train")) {
+
+            while (resultSet.next()) {
+                String classTrain = resultSet.getString("class_train");
+                classComboBox.addItem(classTrain);
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
     }
 
     public static void main(String[] args) {
