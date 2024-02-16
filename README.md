@@ -16,3 +16,5 @@ transactions.
  traveler, including class (1e, 2e) seat and destination.
  
 2.*Print ticket*
+
+3.*Reduction Card Benefits*:Enjoy special discounts using a reduction card when purchasing tickets.
