@@ -23,14 +23,10 @@ Ilyas Bajji
 <br>
 Rayhana El Ajjouri
 <br>
-
 Zineb Riahi
 <br>
-
 Raja Jarfani
 <br>
-
 EL HASNAOUI Chaymae
 <br>
-
 EL AISSI Fatima 
