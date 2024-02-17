@@ -16,3 +16,12 @@ transactions.
  traveler, including class (1e, 2e) seat and destination.
  
 2.*Print ticket*
+
+
+# Contributors :
+Ilyas Bajji
+Rayhana El Ajjouri
+Zineb Riahi
+Raja Jarfani
+EL HASNAOUI Chaymae
+EL AISSI Fatima 
