@@ -18,6 +18,10 @@ transactions.
 2.*Print ticket*
 
 
+# Docker
+check *dockerize folder* to run the app quickly.
+you need to build an image and run the container. to do so, inside the folder there is commands that will help.
+ 
 # Contributors :
 Ilyas Bajji
 <br>
@@ -30,3 +34,5 @@ Raja Jarfani
 EL HASNAOUI Chaymae
 <br>
 EL AISSI Fatima 
+
+
