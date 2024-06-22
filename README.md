@@ -24,6 +24,7 @@ check *dockerize folder* to run the app quickly.
 you need to build an image and run the container. to do so, inside the folder there is commands that will help, which are :
 <br>
 `docker build -t train-app .`
+<br>
 `docker run -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix --network="host" train-app`
  <br>
 # Contributors :
